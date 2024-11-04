@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/protobom/storage/internal/backends/ent/annotation"
 	"github.com/protobom/storage/internal/backends/ent/edgetype"
 	"github.com/protobom/storage/internal/backends/ent/externalreference"
 	"github.com/protobom/storage/internal/backends/ent/node"
@@ -450,6 +451,21 @@ func (nu *NodeUpdate) AddProperties(p ...*Property) *NodeUpdate {
 	return nu.AddPropertyIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the Annotation entity by IDs.
+func (nu *NodeUpdate) AddAnnotationIDs(ids ...int) *NodeUpdate {
+	nu.mutation.AddAnnotationIDs(ids...)
+	return nu
+}
+
+// AddAnnotations adds the "annotations" edges to the Annotation entity.
+func (nu *NodeUpdate) AddAnnotations(a ...*Annotation) *NodeUpdate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return nu.AddAnnotationIDs(ids...)
+}
+
 // AddNodeListIDs adds the "node_lists" edge to the NodeList entity by IDs.
 func (nu *NodeUpdate) AddNodeListIDs(ids ...uuid.UUID) *NodeUpdate {
 	nu.mutation.AddNodeListIDs(ids...)
@@ -630,6 +646,27 @@ func (nu *NodeUpdate) RemoveProperties(p ...*Property) *NodeUpdate {
 		ids[i] = p[i].ID
 	}
 	return nu.RemovePropertyIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the Annotation entity.
+func (nu *NodeUpdate) ClearAnnotations() *NodeUpdate {
+	nu.mutation.ClearAnnotations()
+	return nu
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to Annotation entities by IDs.
+func (nu *NodeUpdate) RemoveAnnotationIDs(ids ...int) *NodeUpdate {
+	nu.mutation.RemoveAnnotationIDs(ids...)
+	return nu
+}
+
+// RemoveAnnotations removes "annotations" edges to Annotation entities.
+func (nu *NodeUpdate) RemoveAnnotations(a ...*Annotation) *NodeUpdate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return nu.RemoveAnnotationIDs(ids...)
 }
 
 // ClearNodeLists clears all "node_lists" edges to the NodeList entity.
@@ -1133,6 +1170,51 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(property.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if nu.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nu.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !nu.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nu.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1659,6 +1741,21 @@ func (nuo *NodeUpdateOne) AddProperties(p ...*Property) *NodeUpdateOne {
 	return nuo.AddPropertyIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the Annotation entity by IDs.
+func (nuo *NodeUpdateOne) AddAnnotationIDs(ids ...int) *NodeUpdateOne {
+	nuo.mutation.AddAnnotationIDs(ids...)
+	return nuo
+}
+
+// AddAnnotations adds the "annotations" edges to the Annotation entity.
+func (nuo *NodeUpdateOne) AddAnnotations(a ...*Annotation) *NodeUpdateOne {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return nuo.AddAnnotationIDs(ids...)
+}
+
 // AddNodeListIDs adds the "node_lists" edge to the NodeList entity by IDs.
 func (nuo *NodeUpdateOne) AddNodeListIDs(ids ...uuid.UUID) *NodeUpdateOne {
 	nuo.mutation.AddNodeListIDs(ids...)
@@ -1839,6 +1936,27 @@ func (nuo *NodeUpdateOne) RemoveProperties(p ...*Property) *NodeUpdateOne {
 		ids[i] = p[i].ID
 	}
 	return nuo.RemovePropertyIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the Annotation entity.
+func (nuo *NodeUpdateOne) ClearAnnotations() *NodeUpdateOne {
+	nuo.mutation.ClearAnnotations()
+	return nuo
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to Annotation entities by IDs.
+func (nuo *NodeUpdateOne) RemoveAnnotationIDs(ids ...int) *NodeUpdateOne {
+	nuo.mutation.RemoveAnnotationIDs(ids...)
+	return nuo
+}
+
+// RemoveAnnotations removes "annotations" edges to Annotation entities.
+func (nuo *NodeUpdateOne) RemoveAnnotations(a ...*Annotation) *NodeUpdateOne {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return nuo.RemoveAnnotationIDs(ids...)
 }
 
 // ClearNodeLists clears all "node_lists" edges to the NodeList entity.
@@ -2372,6 +2490,51 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(property.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if nuo.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nuo.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !nuo.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nuo.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

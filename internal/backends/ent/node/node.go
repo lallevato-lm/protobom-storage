@@ -84,6 +84,8 @@ const (
 	EdgeNodes = "nodes"
 	// EdgeProperties holds the string denoting the properties edge name in mutations.
 	EdgeProperties = "properties"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
 	// EdgeNodeLists holds the string denoting the node_lists edge name in mutations.
 	EdgeNodeLists = "node_lists"
 	// EdgeEdgeTypes holds the string denoting the edge_types edge name in mutations.
@@ -136,6 +138,13 @@ const (
 	PropertiesInverseTable = "properties"
 	// PropertiesColumn is the table column denoting the properties relation/edge.
 	PropertiesColumn = "node_id"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "annotations"
+	// AnnotationsInverseTable is the table name for the Annotation entity.
+	// It exists in this package in order to avoid circular dependency with the "annotation" package.
+	AnnotationsInverseTable = "annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "node_id"
 	// NodeListsTable is the table that holds the node_lists relation/edge. The primary key declared below.
 	NodeListsTable = "node_list_nodes"
 	// NodeListsInverseTable is the table name for the NodeList entity.
@@ -434,6 +443,20 @@ func ByProperties(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByNodeListsCount orders the results by node_lists count.
 func ByNodeListsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -515,6 +538,13 @@ func newPropertiesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PropertiesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PropertiesTable, PropertiesColumn),
+	)
+}
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
 	)
 }
 func newNodeListsStep() *sqlgraph.Step {

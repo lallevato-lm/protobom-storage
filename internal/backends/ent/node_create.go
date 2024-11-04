@@ -19,6 +19,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/protobom/protobom/pkg/sbom"
+	"github.com/protobom/storage/internal/backends/ent/annotation"
 	"github.com/protobom/storage/internal/backends/ent/document"
 	"github.com/protobom/storage/internal/backends/ent/edgetype"
 	"github.com/protobom/storage/internal/backends/ent/externalreference"
@@ -311,6 +312,21 @@ func (nc *NodeCreate) AddProperties(p ...*Property) *NodeCreate {
 		ids[i] = p[i].ID
 	}
 	return nc.AddPropertyIDs(ids...)
+}
+
+// AddAnnotationIDs adds the "annotations" edge to the Annotation entity by IDs.
+func (nc *NodeCreate) AddAnnotationIDs(ids ...int) *NodeCreate {
+	nc.mutation.AddAnnotationIDs(ids...)
+	return nc
+}
+
+// AddAnnotations adds the "annotations" edges to the Annotation entity.
+func (nc *NodeCreate) AddAnnotations(a ...*Annotation) *NodeCreate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return nc.AddAnnotationIDs(ids...)
 }
 
 // AddNodeListIDs adds the "node_lists" edge to the NodeList entity by IDs.
@@ -710,6 +726,22 @@ func (nc *NodeCreate) createSpec() (*Node, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(property.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := nc.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   node.AnnotationsTable,
+			Columns: []string{node.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(annotation.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

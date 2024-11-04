@@ -22,6 +22,7 @@ var (
 		{Name: "is_unique", Type: field.TypeBool, Default: false},
 		{Name: "document_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "document_annotations", Type: field.TypeUUID, Nullable: true},
+		{Name: "node_id", Type: field.TypeString, Nullable: true},
 	}
 	// AnnotationsTable holds the schema information for the "annotations" table.
 	AnnotationsTable = &schema.Table{
@@ -41,12 +42,29 @@ var (
 				RefColumns: []*schema.Column{DocumentsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
+			{
+				Symbol:     "annotations_nodes_annotations",
+				Columns:    []*schema.Column{AnnotationsColumns[6]},
+				RefColumns: []*schema.Column{NodesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "idx_annotations",
+				Name:    "idx_node_annotations",
+				Unique:  true,
+				Columns: []*schema.Column{AnnotationsColumns[6], AnnotationsColumns[1], AnnotationsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "node_id != ''",
+				},
+			},
+			{
+				Name:    "idx_document_annotations",
 				Unique:  true,
 				Columns: []*schema.Column{AnnotationsColumns[4], AnnotationsColumns[1], AnnotationsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "document_id != ''",
+				},
 			},
 			{
 				Name:    "idx_document_unique_annotations",
@@ -559,6 +577,7 @@ var (
 func init() {
 	AnnotationsTable.ForeignKeys[0].RefTable = DocumentsTable
 	AnnotationsTable.ForeignKeys[1].RefTable = DocumentsTable
+	AnnotationsTable.ForeignKeys[2].RefTable = NodesTable
 	DocumentsTable.ForeignKeys[0].RefTable = MetadataTable
 	DocumentsTable.ForeignKeys[1].RefTable = NodeListsTable
 	DocumentTypesTable.ForeignKeys[0].RefTable = DocumentsTable

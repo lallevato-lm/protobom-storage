@@ -98,13 +98,15 @@ type NodeEdges struct {
 	Nodes []*Node `json:"nodes,omitempty"`
 	// Properties holds the value of the properties edge.
 	Properties []*Property `json:"properties,omitempty"`
+	// Annotations holds the value of the annotations edge.
+	Annotations []*Annotation `json:"annotations,omitempty"`
 	// NodeLists holds the value of the node_lists edge.
 	NodeLists []*NodeList `json:"node_lists,omitempty"`
 	// EdgeTypes holds the value of the edge_types edge.
 	EdgeTypes []*EdgeType `json:"edge_types,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [10]bool
+	loadedTypes [11]bool
 }
 
 // DocumentOrErr returns the Document value or an error if the edge
@@ -181,10 +183,19 @@ func (e NodeEdges) PropertiesOrErr() ([]*Property, error) {
 	return nil, &NotLoadedError{edge: "properties"}
 }
 
+// AnnotationsOrErr returns the Annotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e NodeEdges) AnnotationsOrErr() ([]*Annotation, error) {
+	if e.loadedTypes[8] {
+		return e.Annotations, nil
+	}
+	return nil, &NotLoadedError{edge: "annotations"}
+}
+
 // NodeListsOrErr returns the NodeLists value or an error if the edge
 // was not loaded in eager-loading.
 func (e NodeEdges) NodeListsOrErr() ([]*NodeList, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.NodeLists, nil
 	}
 	return nil, &NotLoadedError{edge: "node_lists"}
@@ -193,7 +204,7 @@ func (e NodeEdges) NodeListsOrErr() ([]*NodeList, error) {
 // EdgeTypesOrErr returns the EdgeTypes value or an error if the edge
 // was not loaded in eager-loading.
 func (e NodeEdges) EdgeTypesOrErr() ([]*EdgeType, error) {
-	if e.loadedTypes[9] {
+	if e.loadedTypes[10] {
 		return e.EdgeTypes, nil
 	}
 	return nil, &NotLoadedError{edge: "edge_types"}
@@ -440,6 +451,11 @@ func (n *Node) QueryNodes() *NodeQuery {
 // QueryProperties queries the "properties" edge of the Node entity.
 func (n *Node) QueryProperties() *PropertyQuery {
 	return NewNodeClient(n.config).QueryProperties(n)
+}
+
+// QueryAnnotations queries the "annotations" edge of the Node entity.
+func (n *Node) QueryAnnotations() *AnnotationQuery {
+	return NewNodeClient(n.config).QueryAnnotations(n)
 }
 
 // QueryNodeLists queries the "node_lists" edge of the Node entity.
