@@ -20,9 +20,9 @@ DROP TABLE `annotations`;
 -- Rename temporary table "new_annotations" to "annotations"
 ALTER TABLE `new_annotations` RENAME TO `annotations`;
 -- Create index "idx_node_annotations" to table: "annotations"
-CREATE UNIQUE INDEX `idx_node_annotations` ON `annotations` (`node_id`, `name`, `value`) WHERE node_id != '';
+CREATE UNIQUE INDEX `idx_node_annotations` ON `annotations` (`node_id`, `name`, `value`) WHERE (node_id = '') is not false;
 -- Create index "idx_document_annotations" to table: "annotations"
-CREATE UNIQUE INDEX `idx_document_annotations` ON `annotations` (`document_id`, `name`, `value`) WHERE document_id != '';
+CREATE UNIQUE INDEX `idx_document_annotations` ON `annotations` (`document_id`, `name`, `value`) WHERE (document_id = '') is not false;
 -- Create index "idx_document_unique_annotations" to table: "annotations"
 CREATE UNIQUE INDEX `idx_document_unique_annotations` ON `annotations` (`document_id`, `name`) WHERE is_unique = true;
 -- Enable back the enforcement of foreign-keys constraints

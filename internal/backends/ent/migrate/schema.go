@@ -55,7 +55,7 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{AnnotationsColumns[6], AnnotationsColumns[1], AnnotationsColumns[2]},
 				Annotation: &entsql.IndexAnnotation{
-					Where: "node_id != ''",
+					Where: "(node_id = '') is not false",
 				},
 			},
 			{
@@ -63,7 +63,7 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{AnnotationsColumns[4], AnnotationsColumns[1], AnnotationsColumns[2]},
 				Annotation: &entsql.IndexAnnotation{
-					Where: "document_id != ''",
+					Where: "(document_id = '') is not false",
 				},
 			},
 			{

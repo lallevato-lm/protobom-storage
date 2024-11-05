@@ -47,11 +47,11 @@ func (Annotation) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("node_id", "name", "value").
 			Unique().
-			Annotations(entsql.IndexWhere("node_id != ''")).
+			Annotations(entsql.IndexWhere("(node_id = '') is not false")).
 			StorageKey("idx_node_annotations"),
 		index.Fields("document_id", "name", "value").
 			Unique().
-			Annotations(entsql.IndexWhere("document_id != ''")).
+			Annotations(entsql.IndexWhere("(document_id = '') is not false")).
 			StorageKey("idx_document_annotations"),
 		index.Fields("document_id", "name").
 			Unique().

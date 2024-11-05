@@ -18,50 +18,6 @@ import (
 	"github.com/protobom/storage/internal/backends/ent/predicate"
 )
 
-// AddDocumentAnnotations applies multiple named annotation values to a single document.
-func (backend *Backend) AddDocumentAnnotations(documentID, name string, values ...string) error {
-	data := ent.Annotations{}
-
-	documentUUID, err := backend.client.Document.Query().
-		Where(document.MetadataIDEQ(documentID)).
-		OnlyID(backend.ctx)
-	if err != nil {
-		return fmt.Errorf("querying documents: %w", err)
-	}
-
-	for _, value := range values {
-		data = append(data, &ent.Annotation{
-			DocumentID: documentUUID,
-			Name:       name,
-			Value:      value,
-		})
-	}
-
-	return backend.withTx(backend.saveAnnotations(data...))
-}
-
-// AddNodeAnnotations applies multiple named annotation values to a single node.
-func (backend *Backend) AddNodeAnnotations(nodeID, name string, values ...string) error {
-	data := ent.Annotations{}
-
-	nodeUUID, err := backend.client.Node.Query().
-		Where(node.IDEQ(nodeID)).
-		OnlyID(backend.ctx)
-	if err != nil {
-		return fmt.Errorf("querying nodes: %w", err)
-	}
-
-	for _, value := range values {
-		data = append(data, &ent.Annotation{
-			NodeID: nodeUUID,
-			Name:   name,
-			Value:  value,
-		})
-	}
-
-	return backend.withTx(backend.saveAnnotations(data...))
-}
-
 // AddAnnotationToDocuments applies a single named annotation value to multiple documents.
 func (backend *Backend) AddAnnotationToDocuments(name, value string, documentIDs ...string) error {
 	data := ent.Annotations{}
@@ -89,15 +45,45 @@ func (backend *Backend) AddAnnotationToNodes(name, value string, nodeIDs ...stri
 	data := ent.Annotations{}
 
 	for _, nodeID := range nodeIDs {
-		nodeUUID, err := backend.client.Node.Query().
-			Where(node.IDEQ(nodeID)).
-			OnlyID(backend.ctx)
-		if err != nil {
-			return fmt.Errorf("querying nodes: %w", err)
-		}
-
 		data = append(data, &ent.Annotation{
-			NodeID: nodeUUID,
+			NodeID: nodeID,
+			Name:   name,
+			Value:  value,
+		})
+	}
+
+	return backend.withTx(backend.saveAnnotations(data...))
+}
+
+// AddDocumentAnnotations applies multiple named annotation values to a single document.
+func (backend *Backend) AddDocumentAnnotations(documentID, name string, values ...string) error {
+	data := ent.Annotations{}
+
+	documentUUID, err := backend.client.Document.Query().
+		Where(document.MetadataIDEQ(documentID)).
+		OnlyID(backend.ctx)
+	if err != nil {
+		return fmt.Errorf("querying documents: %w", err)
+	}
+
+	for _, value := range values {
+		data = append(data, &ent.Annotation{
+			DocumentID: documentUUID,
+			Name:       name,
+			Value:      value,
+		})
+	}
+
+	return backend.withTx(backend.saveAnnotations(data...))
+}
+
+// AddNodeAnnotations applies multiple named annotation values to a single node.
+func (backend *Backend) AddNodeAnnotations(nodeID, name string, values ...string) error {
+	data := ent.Annotations{}
+
+	for _, value := range values {
+		data = append(data, &ent.Annotation{
+			NodeID: nodeID,
 			Name:   name,
 			Value:  value,
 		})
@@ -163,29 +149,6 @@ func (backend *Backend) GetDocumentAnnotations(documentID string, names ...strin
 	return annotations, nil
 }
 
-// GetNodeAnnotations gets all annotations for the specified
-// node, limited to a set of annotation names if specified.
-func (backend *Backend) GetNodeAnnotations(nodeID string, names ...string) (ent.Annotations, error) {
-	if backend.client == nil {
-		return nil, errUninitializedClient
-	}
-
-	predicates := []predicate.Annotation{
-		annotation.HasNodeWith(node.IDEQ(nodeID)),
-	}
-
-	if len(names) > 0 {
-		predicates = append(predicates, annotation.NameIn(names...))
-	}
-
-	annotations, err := backend.client.Annotation.Query().Where(predicates...).All(backend.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("querying annotations: %w", err)
-	}
-
-	return annotations, nil
-}
-
 // GetDocumentsByAnnotation gets all documents having the specified named
 // annotation, limited to a set of annotation values if specified.
 func (backend *Backend) GetDocumentsByAnnotation(name string, values ...string) ([]*sbom.Document, error) {
@@ -213,6 +176,53 @@ func (backend *Backend) GetDocumentsByAnnotation(name string, values ...string) 
 	return backend.GetDocumentsByID(ids...)
 }
 
+// GetDocumentUniqueAnnotation gets the value for a unique annotation.
+func (backend *Backend) GetDocumentUniqueAnnotation(documentID, name string) (string, error) {
+	if backend.client == nil {
+		return "", errUninitializedClient
+	}
+
+	result, err := backend.client.Annotation.Query().
+		Where(
+			annotation.HasDocumentWith(document.MetadataIDEQ(documentID)),
+			annotation.NameEQ(name),
+			annotation.IsUniqueEQ(true),
+		).
+		Only(backend.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", nil
+		}
+
+		return "", fmt.Errorf("retrieving unique annotation for document: %w", err)
+	}
+
+	return result.Value, nil
+}
+
+// GetNodeAnnotations gets all annotations for the specified
+// node, limited to a set of annotation names if specified.
+func (backend *Backend) GetNodeAnnotations(nodeID string, names ...string) (ent.Annotations, error) {
+	if backend.client == nil {
+		return nil, errUninitializedClient
+	}
+
+	predicates := []predicate.Annotation{
+		annotation.HasNodeWith(node.IDEQ(nodeID)),
+	}
+
+	if len(names) > 0 {
+		predicates = append(predicates, annotation.NameIn(names...))
+	}
+
+	annotations, err := backend.client.Annotation.Query().Where(predicates...).All(backend.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("querying annotations: %w", err)
+	}
+
+	return annotations, nil
+}
+
 // GetNodesByAnnotation gets all nodes having the specified named
 // annotation, limited to a set of annotation values if specified.
 func (backend *Backend) GetNodesByAnnotation(name string, values ...string) ([]*sbom.Node, error) {
@@ -238,30 +248,6 @@ func (backend *Backend) GetNodesByAnnotation(name string, values ...string) ([]*
 	}
 
 	return backend.GetNodesByID(ids...)
-}
-
-// GetDocumentUniqueAnnotation gets the value for a unique annotation.
-func (backend *Backend) GetDocumentUniqueAnnotation(documentID, name string) (string, error) {
-	if backend.client == nil {
-		return "", errUninitializedClient
-	}
-
-	result, err := backend.client.Annotation.Query().
-		Where(
-			annotation.HasDocumentWith(document.MetadataIDEQ(documentID)),
-			annotation.NameEQ(name),
-			annotation.IsUniqueEQ(true),
-		).
-		Only(backend.ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return "", nil
-		}
-
-		return "", fmt.Errorf("retrieving unique annotation for document: %w", err)
-	}
-
-	return result.Value, nil
 }
 
 // GetNodeUniqueAnnotation gets the value for a unique annotation.
@@ -341,15 +327,6 @@ func (backend *Backend) SetDocumentAnnotations(documentID, name string, values .
 	return backend.AddDocumentAnnotations(documentID, name, values...)
 }
 
-// SetNodeAnnotations explicitly sets the named annotations for the specified node.
-func (backend *Backend) SetNodeAnnotations(nodeID, name string, values ...string) error {
-	if err := backend.ClearNodeAnnotations(nodeID); err != nil {
-		return err
-	}
-
-	return backend.AddNodeAnnotations(nodeID, name, values...)
-}
-
 // SetDocumentUniqueAnnotation sets a named annotation value that is unique to the specified document.
 func (backend *Backend) SetDocumentUniqueAnnotation(documentID, name, value string) error {
 	documentUUID, err := backend.client.Document.Query().
@@ -369,18 +346,20 @@ func (backend *Backend) SetDocumentUniqueAnnotation(documentID, name, value stri
 	)
 }
 
-// SetNodeUniqueAnnotation sets a named annotation value that is unique to the specified node.
-func (backend *Backend) SetNodeUniqueAnnotation(nodeID, name, value string) error {
-	nodeUUID, err := backend.client.Node.Query().
-		Where(node.IDEQ(nodeID)).
-		OnlyID(backend.ctx)
-	if err != nil {
-		return fmt.Errorf("%w", err)
+// SetNodeAnnotations explicitly sets the named annotations for the specified node.
+func (backend *Backend) SetNodeAnnotations(nodeID, name string, values ...string) error {
+	if err := backend.ClearNodeAnnotations(nodeID); err != nil {
+		return err
 	}
 
+	return backend.AddNodeAnnotations(nodeID, name, values...)
+}
+
+// SetNodeUniqueAnnotation sets a named annotation value that is unique to the specified node.
+func (backend *Backend) SetNodeUniqueAnnotation(nodeID, name, value string) error {
 	return backend.withTx(
 		backend.saveAnnotations(&ent.Annotation{
-			NodeID:   nodeUUID,
+			NodeID:   nodeID,
 			Name:     name,
 			Value:    value,
 			IsUnique: true,
